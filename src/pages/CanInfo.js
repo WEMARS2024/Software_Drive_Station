@@ -18,6 +18,8 @@ function canData() {
             </div>
             </div>
             <span className="fixed block w-full h-2 top-[75px] left-0 bg-gradient-to-b from-purple-500 via-purple-700 to-purple-800" />
+            <div className="w-full h-screen">
+            </div>
         </div>
     );
 }

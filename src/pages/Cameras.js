@@ -1,6 +1,6 @@
 import WeMars from "../images/WE_Mars.jpg";
-import VideoStream from "../WebRTC.js";
 import ButtonLink from '../components/buttonLink.js'
+import WebRTCStream from '../components/SignallingServer.js'
 
 
 function CameraPage() {
@@ -24,15 +24,10 @@ function CameraPage() {
             <div className="grid grid-cols-2 fixed top-10 h-screen w-full">
             <div className="col-span-1 flex justify-center items-center">
                 <div className="relative border-solid border-4 border-purple-500 w-[800px] h-[700px] rounded-lg bg-white">
-                <VideoStream />
+                    <WebRTCStream />
                 </div>
             </div>
-            </div>
-
-
-
-
-            
+            </div> 
 
         </div>
     )

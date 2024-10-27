@@ -33,7 +33,7 @@ async def insert_data(pitch, roll, yaw, longitude, latitude, speed):
     conn.commit()
 
 async def handler():
-    uri = "ws://192.168.137.235:8000"  # Ensure the correct WebSocket server URI
+    uri = "ws://192.168.137.235:5000"  # Ensure the correct WebSocket server URI
     print(f"Connecting to WebSocket server at {uri}...")
     try:
         async with websockets.connect(uri, timeout=30) as websocket:  # Increase timeout to 30 seconds

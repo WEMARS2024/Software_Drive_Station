@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import WeMars from "../images/WE_Mars.jpg";
 import ButtonLink from '../components/buttonLink.js';
-import IMUData from '../IMU_Data.js'
-import GPSMap from "../Maps.js"
+
 
 
 
@@ -25,10 +24,8 @@ function sensors() {
 
             <div className="grid grid-cols-2 fixed top-20 h-screen w-full ">
                 <div id="IMU-data" className="cols-span-1 flex justify-center items-center mb-[480px] mr-[200px]">
-                    <IMUData />
                 </div>
                 <div id="GPS" className="cols-span-1 flex justify-center items-center">
-                    <GPSMap />
                 </div>
             </div>
 

@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  front-end:
+      build:
+        context: .
+        dockerfile: Dockerfile.react
+      ports: 
+       - 3000:3000
+      depends_on:
+       - python-files
+
+  python-files:
+        build:
+          context: .
+          dockerfile: Dockerfile.python
+        ports:
+          - 5000:5000
+
+

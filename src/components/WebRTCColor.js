@@ -1,83 +1,64 @@
 import React, { useState, useRef, useEffect } from "react";
 
-
 const VideoStream = () => {
     const videoRef1 = useRef(null);
     const videoRef2 = useRef(null);
     const videoRef3 = useRef(null);
-    const pcRef = useRef(null);
-    const [connectionStatus, setConnectionStatus] = useState("Disconnected");
+    const videoRef4 = useRef(null);
+    const videoRef5 = useRef(null);
+    const videoRef6 = useRef(null);
 
-    let trackCount = 0;
+    const streamRefs = {
+        color: videoRef1,
+        depth: videoRef2,
+        webcam1: videoRef3,
+        webcam2: videoRef4,
+        webcam3: videoRef5,
+        webcam4: videoRef6,
+    };
 
-    const startConnection = async () => {
-        setConnectionStatus("Connecting...");
+    const pcMap = useRef({});
+
+    const [streamStatus, setStreamStatus] = useState({});
+
+    const startConnection = async (streamName, videoRef) => {
+        setStreamStatus(prev => ({ ...prev, [streamName]: "Connecting..." }));
 
         try {
-            // Create a new RTCPeerConnection
             const pc = new RTCPeerConnection({
                 iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
             });
-            pcRef.current = pc;
+            pcMap.current[streamName] = pc;
 
-            // Handle incoming tracks
             pc.ontrack = (event) => {
                 const stream = new MediaStream([event.track]);
-
-                if (trackCount === 0 && videoRef1.current) {
-                    videoRef1.current.srcObject = stream;
-                    videoRef1.current.play();
-                }
-                if (trackCount === 1 && videoRef2.current) {
-                    videoRef2.current.srcObject = stream;
-                    videoRef2.current.play();
-                }
-
-                if (trackCount === 2 && videoRef3.current) {
-                    videoRef3.current.srcObject = stream;
-                    videoRef3.current.play();
-                }
-                
-                trackCount++;
-            }; 
-
-            // Handle connection state changes
-            pc.onconnectionstatechange = () => {
-                switch (pc.connectionState) {
-                    case "connected":
-                        setConnectionStatus("Connected");
-                        break;
-                    case "disconnected":
-                    case "failed":
-                        setConnectionStatus("Disconnected");
-                        cleanupConnection();
-                        break;
-                    case "connecting":
-                        setConnectionStatus("Connecting...");
-                        break;
-                    default:
-                        setConnectionStatus("Disconnected");
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    videoRef.current.play();
                 }
             };
-            
+
+            pc.onconnectionstatechange = () => {
+                if (pc.connectionState === "connected") {
+                    setStreamStatus(prev => ({ ...prev, [streamName]: "Connected" }));
+                } else if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
+                    setStreamStatus(prev => ({ ...prev, [streamName]: "Disconnected" }));
+                    cleanupConnection(streamName);
+                }
+            };
 
             pc.addTransceiver("video", { direction: "recvonly" });
-            pc.addTransceiver("video", { direction: "recvonly" });
-            pc.addTransceiver("video", { direction: "recvonly"});
-            // Create an SDP offer
-            const offer = await pc.createOffer({
-                offerToReceiveAudio: false,
-                offerToReceiveVideo: true, // Ensure the offer explicitly requests video
-            });
+
+            const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 
-            // Send the offer to the server
-            const response = await fetch("http://192.168.0.111:8080/offer", {
+            const response = await fetch("http://192.168.0.183:8080/offer", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     sdp: pc.localDescription.sdp,
                     type: pc.localDescription.type,
+                    streams: [streamName],
                 }),
             });
 
@@ -85,112 +66,91 @@ const VideoStream = () => {
                 throw new Error("Failed to fetch SDP answer from the server");
             }
 
-            // Process the server's SDP answer
             const data = await response.json();
-            if (!data.sdp || !data.type) {
-                throw new Error("Invalid SDP answer received from the server");
-            }
             const answer = new RTCSessionDescription(data);
             await pc.setRemoteDescription(answer);
 
-            setConnectionStatus("Connected");
+            setStreamStatus(prev => ({ ...prev, [streamName]: "Connected" }));
         } catch (error) {
-            console.error("Error during connection:", error);
-            setConnectionStatus("Failed to connect");
+            console.error(`Error starting stream "${streamName}":`, error);
+            setStreamStatus(prev => ({ ...prev, [streamName]: "Failed" }));
         }
     };
 
-    const cleanupConnection = () => {
-        if (pcRef.current) {
-            pcRef.current.close();
-            pcRef.current = null;
+    const stopStream = async (streamName) => {
+        try {
+            await fetch("http://192.168.0.183:8080/stop", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ stream: streamName }),
+            });
+        } catch (err) {
+            console.error(`Error stopping stream "${streamName}":`, err);
+        }
+
+        cleanupConnection(streamName);
+        setStreamStatus(prev => ({ ...prev, [streamName]: "Stopped" }));
+    };
+
+    const cleanupConnection = (streamName) => {
+        const pc = pcMap.current[streamName];
+        if (pc) {
+            pc.close();
+            delete pcMap.current[streamName];
+        }
+
+        const ref = streamRefs[streamName];
+        if (ref?.current) {
+            ref.current.srcObject = null;
         }
     };
 
     useEffect(() => {
         return () => {
-            cleanupConnection();
+            Object.keys(pcMap.current).forEach(cleanupConnection);
         };
     }, []);
 
     return (
-
-        <div className="pl-32 grid grid-cols-3 fixed h-screen w-full">
-            <div className="col-start-2 col-end-3 flex justify-center items-center">
-                <div className="relative border-solid border-4 border-customPurple w-11/12 h-11/12 rounded-lg bg-white">
-                    <div className="w-full h-full relative overflow-hidden">
-                        <button className="bg-customPurple rounded-lg p-2 text-lg m-2" onClick={startConnection} disabled={connectionStatus === "Connected"} >
-                            Start Stream | Status: {connectionStatus}
-                        </button>
-                        <div className="aspect-video w-full h-full">
-                            <video
-                                ref={videoRef2}
-                                autoPlay
-                                playsInline
-                                controls
-                                className="max-w-full max-h-full w-full h-full object-contain"
-                            />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 p-8 bg-gray-900 min-h-screen">
+            {Object.entries(streamRefs).map(([streamName, ref], index) => (
+                <div
+                    key={streamName}
+                    className="bg-gray-800 border-2 border-purple-600 rounded-lg shadow-lg p-4 flex flex-col justify-between"
+                >
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-purple-300 font-semibold text-lg">
+                            {streamName.toUpperCase()}
+                        </h2>
+                        <div className="flex gap-2">
+                            <button
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-1 rounded"
+                                onClick={() => startConnection(streamName, ref)}
+                                disabled={streamStatus[streamName] === "Connected"}
+                            >
+                                {streamStatus[streamName] === "Connected" ? "Connected" : "Start"}
+                            </button>
+                            <button
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded"
+                                onClick={() => stopStream(streamName)}
+                                disabled={!streamStatus[streamName] || streamStatus[streamName] === "Disconnected"}
+                            >
+                                Stop
+                            </button>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div className="col-start-3 col-end-4 flex justify-center items-center">
-                <div className="relative border-solid border-4 border-customPurple w-11/12 h-11/12 rounded-lg bg-white">
-                    <div className="w-full h-full relative overflow-hidden">
-                        <button className="bg-customPurple rounded-lg p-2 text-lg m-2" onClick={startConnection} disabled={connectionStatus === "Connected"} >
-                            Start Stream | Status: {connectionStatus}
-                        </button>
-                        <div className="aspect-video w-full h-full">
-                            <video
-                                ref={videoRef1}
-                                autoPlay
-                                playsInline
-                                controls
-                                className="max-w-full max-h-full w-full h-full object-contain"
-                            />
-                        </div>
+                    <div className="aspect-video bg-black rounded overflow-hidden">
+                        <video
+                            ref={ref}
+                            autoPlay
+                            playsInline
+                            controls
+                            className="w-full h-full object-contain"
+                        />
                     </div>
                 </div>
-            </div>
-            <div className="col-start-2 col-end-3 flex justify-center items-center">
-                <div className="relative border-solid border-4 border-customPurple rounded-lg w-11/12 h-11/12 bg-white">
-                    <div className="w-full h-full relative overflow-hidden">
-                        <button className="bg-customPurple rounded-lg p-2 text-lg m-2" onClick={startConnection} disabled={connectionStatus === "Connected"} >
-                            Start Stream | Status: {connectionStatus}
-                        </button>
-                        <div className="aspect-video w-full h-full">
-                            <video
-                                ref={videoRef3}
-                                autoPlay
-                                playsInline
-                                controls
-                                className="max-w-full max-h-full w-full h-full object-contain"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="col-start-3 col-end-4 flex justify-center items-center">
-                <div className="relative border-solid border-4 border-customPurple rounded-lg w-11/12 h-11/12 bg-white">
-                    <div className="w-full h-full relative overflow-hidden">
-                        <button className="bg-customPurple rounded-lg p-2 text-lg m-2" onClick={startConnection} disabled={connectionStatus === "Connected"} >
-                            Start Stream | Status: {connectionStatus}
-                        </button>
-                        <div className="aspect-video w-full h-full">
-                            <video
-                                ref={videoRef1}
-                                autoPlay
-                                playsInline
-                                controls
-                                className="max-w-full max-h-full w-full h-full object-contain"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
+            ))}
         </div>
-
-
     );
 };
 

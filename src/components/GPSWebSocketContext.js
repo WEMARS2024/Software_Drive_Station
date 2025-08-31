@@ -17,7 +17,7 @@ export const GPSWebSocketProvider = ({ children }) => {
       wsRef.current.close();
     }
 
-    const ws = new WebSocket('ws://localhost:5000');
+    const ws = new WebSocket('ws://192.168.1.100:5000');
     wsRef.current = ws;
 
     ws.onopen = () => {

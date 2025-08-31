@@ -31,7 +31,6 @@ function App() {
 
   return (
     <div className="App relative bg-gray-900">
-
       {/* Sidebar Button */}
       {!imageOpen && (
         <button
@@ -50,7 +49,7 @@ function App() {
       {/* Fullscreen Button */}
       <button
         onClick={toggleFullScreen}
-        className="sticky z-50 p-2 hover:opacity-90 transition rounded-md bg-white text-purple-600 shadow-lg focus:outline-none transform translate-x-[1305px] translate-y-[8px]" 
+        className="sticky z-50 p-2 hover:opacity-90 transition rounded-md bg-white text-purple-600 shadow-lg focus:outline-none transform translate-x-[1625px] translate-y-[8px]" 
         title={isFullScreen ? "Exit Full Screen" : "Go Full Screen"}
       >
         {isFullScreen ? "Exit Full Screen" : "Go Full Screen"}

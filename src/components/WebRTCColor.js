@@ -52,7 +52,7 @@ const VideoStream = () => {
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 
-            const response = await fetch("http://192.168.0.183:8080/offer", {
+            const response = await fetch("http://192.168.1.100:8080/offer", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -79,7 +79,7 @@ const VideoStream = () => {
 
     const stopStream = async (streamName) => {
         try {
-            await fetch("http://192.168.0.183:8080/stop", {
+            await fetch("http://192.168.1.100:8080/stop", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ stream: streamName }),
